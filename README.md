@@ -100,6 +100,7 @@ Slack APIの3秒タイムアウト制約を解決するため、**Receiver-Worke
 │
 └── docs/                     # ドキュメント、構成図、スクリーンショット
 
+```
 
 ### 解説のアピールポイント（READMEに追加する言葉）
 
@@ -111,10 +112,59 @@ Slack APIの3秒タイムアウト制約を解決するため、**Receiver-Worke
 > - **Modular Functions**: 受付（Receiver）と実行（Worker）を別関数に分けることで、将来的な「Slack以外のインターフェース追加」にも柔軟に対応できる構成にしています。
 
 ---
+## 🚀 Setup & Deployment
+このプロジェクトを自身のGoogle Cloud環境にデプロイする手順です。
+1. 前提条件 (Prerequisites)
+Google Cloud Project の作成と課金有効化
+Google Cloud CLI (gcloud) のインストール
+Terraform (v1.5.0以上推奨) のインストール
 
-### 次のステップとしてのお手伝い
 
-ディレクトリ構造が固まったので、次は**「このリポジトリをクローンした人がどうやってデプロイするか」という「Setup / Deployment」のセクション**を作成しましょうか？（`terraform apply` を実行するまでの手順など）
+2. Google Cloud の認証と準備
+ターミナルから自身のプロジェクトに対して認証を行います。
+
+# ログイン
+gcloud auth application-default login
+
+# プロジェクトの設定
+gcloud config set project [YOUR_PROJECT_ID]
+
+# 必要なAPIの有効化
+gcloud services enable \
+  cloudfunctions.googleapis.com \
+  cloudbuild.googleapis.com \
+  cloudtasks.googleapis.com \
+  bigquery.googleapis.com \
+  artifactregistry.googleapis.com
+
+3. Terraform によるデプロイ
+terraform/ ディレクトリに移動し、リソースを作成します。
+
+cd terraform
+
+# 初期化
+terraform init
+
+# 実行計画の確認
+terraform plan
+
+# デプロイ実行
+terraform apply
+Note: デプロイが完了すると、slack_receiver_url が出力されます。これをSlackのSlash Command設定に使用します。
+
+4. Slack App の設定
+Slack API Control Panel で新しいアプリを作成します。
+Slash Commands を作成し、以下を設定します：
+Command: /weather-compare
+Request URL: Terraformの出力結果にある slack_receiver_url を入力。
+アプリをワークスペースにインストールします。
 
 
+Infrastructure as Code (IaC) の徹底
+手動でのコンソール操作を最小限に抑え、すべてのリソース（IAM権限、ネットワーク、データベース、キュー、サーバーレス関数）をコードで管理しています。これにより、環境の「構成ドリフト」を防ぎ、本番環境への移行もスムーズに行える設計になっています。
+
+次のステップとして
+これでGitHubのREADMEの主要パーツ（概要・構成・構造・デプロイ）が揃いました！
+最後に、「未着手の認証（Signing Secrets）」を今後どう実装する予定か、Slack APIの公式ドキュメントへのリンクを交えつつ、「Roadmap / Future Improvements」の章を詳しく書き上げましょうか？
+これにより、「現在の未完成部分」を「将来の伸び代」としてポジティブに表現できます。
 
