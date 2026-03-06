@@ -1,0 +1,12 @@
+#Google Cloud 認証: ターミナルで 
+gcloud auth application-default login
+
+# 1. 初期化: ターミナルで以下を実行し、Google Cloud用のプラグインを読み込みます。
+terraform init
+
+# 2. 計画確認: 何が作成されるか確認します。
+terraform plan
+
+# 3. 反映: 実際にGoogle Cloud上に作成します。
+terraform apply
+

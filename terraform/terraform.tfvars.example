@@ -1,0 +1,15 @@
+#################################################################
+# Terraform 変数設定ファイル (Variable Definitions)
+# 
+# [重要] 
+# ・このファイルにはプロジェクトIDやAPIトークンなどの実数値を記入します。
+# ・以下の3行に関しては、実行環境に合わせた値に修正して下さい 
+#################################################################
+# 要修正1 #project_id           = "your-project-id"
+# 要修正2 #slack_bot_token      = "xoxb-......................."
+# 要修正3 #slack_signing_secret = "................"
+region               = "asia-northeast1"
+queue_id             = "weather-import-queue-5"
+lat                  = "35.6895"
+lon                  = "139.6917"
+table_id             = "raw_weather_data"
