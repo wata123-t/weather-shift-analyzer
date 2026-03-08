@@ -3,22 +3,39 @@ import pandas as pd
 import requests
 import os
 from google.cloud import bigquery
+from pydantic import BaseModel, Field
+from typing import List, Optional
 
-@functions_framework.http
+##############################
+# Pydantic モデルの定義
+##############################
+# APIのレスポンス構造を定義
+class DailyData(BaseModel):
+    time: List[str]
+    temperature_2m_max: List[Optional[float]]
+    temperature_2m_min: List[Optional[float]]
+    relative_humidity_2m_mean: List[Optional[float]]
+
+# ルートの構造
+class WeatherResponse(BaseModel):
+    daily: DailyData
+
+PROJECT_ID = os.environ.get("PROJECT_ID")
+DATASET_ID = os.environ.get("DATASET_ID")
+TABLE_ID   = os.environ.get("TABLE_ID")
+# 環境変数は「文字列」で届くため、数値計算やAPI用に float へキャスト
+LAT        = float(os.environ.get("LAT")) 
+LON        = float(os.environ.get("LON"))
+ 
+
 #######################
 # ◆機能ブロック1:「エントリーポイント」
 #######################
+@functions_framework.http
 def fetch_weather_handler(request):
     # 1. リクエストと環境変数の取得
     request_json = request.get_json(silent=True)
     response_url = request_json.get('response_url') if request_json else None
-    
-    PROJECT_ID = os.environ.get("PROJECT_ID")
-    DATASET_ID = os.environ.get("DATASET_ID")
-    TABLE_ID   = os.environ.get("TABLE_ID")
-    # 環境変数は「文字列」で届くため、数値計算やAPI用に float へキャスト
-    LAT        = float(os.environ.get("LAT")) 
-    LON        = float(os.environ.get("LON"))
     
     table_path = f"{PROJECT_ID}.{DATASET_ID}.{TABLE_ID}"
     client = bigquery.Client(project=PROJECT_ID)
@@ -50,8 +67,13 @@ def fetch_weather_handler(request):
         
     except Exception as e:
         # エラー発生時はメッセージを上書きし、ログに出力
-        message = f"❌ 処理中にエラーが発生しました: {str(e)}"
-        print(f"Detailed Error: {str(e)}")
+        error_detail = str(e)
+        if "validation error" in error_detail.lower():
+            message = f"❌ APIデータの形式が正しくありません(Pydanticエラー): {error_detail[:100]}..."
+        else:
+            message = f"❌ 処理中にエラーが発生しました: {error_detail}"
+        
+        print(f"Detailed Error: {error_detail}")
 
     # 3. Slack への応答メッセージ送信（response_url がある場合のみ）
     if response_url:
@@ -81,12 +103,16 @@ def fetch_and_load(start, end, bq_client, table_path, lat, lon):
         "timezone": "Asia/Tokyo"
     }
     
-    # API リクエスト
+    # APIリクエスト
     response = requests.get(url, params=params)
-    resp_json = response.json()
-
-    # Pandas によるデータ整形
-    df = pd.DataFrame(resp_json["daily"])
+    response.raise_for_status() 
+    
+    # Pydantic を使用:生データをモデルに流し込み、チェックと変換を行う
+    weather_data = WeatherResponse(**response.json())
+    # 合格したデータを辞書に戻す(model_dump() で辞書化し、その中の ['daily'] 部分だけを取り出す)
+    valid_daily_dict = weather_data.daily.model_dump()
+    # Pandasによるデータ整形
+    df = pd.DataFrame(valid_daily_dict)
     # DATE型へ変換（時刻の切り捨て）
     df['time'] = pd.to_datetime(df['time']).dt.date
     
